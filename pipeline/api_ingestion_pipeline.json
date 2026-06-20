@@ -1,0 +1,85 @@
+{
+	"name": "api_ingestion_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "githun_data_from_nag",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"url": "https://raw.githubusercontent.com/lathish123/data/refs/heads/main/DimAirport.json"
+				}
+			},
+			{
+				"name": "copying_web_data",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "githun_data_from_nag",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "HttpReadSettings",
+							"requestMethod": "GET"
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"value": "@activity('githun_data_from_nag').output",
+						"type": "Expression"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Json1_from_web",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Json1",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2026-06-02T11:59:47Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

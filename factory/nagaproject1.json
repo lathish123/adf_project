@@ -1,0 +1,15 @@
+{
+	"name": "nagaproject1",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "76530741-aede-4e99-b316-e97ba8cb5ce6",
+		"tenantId": "da7f70ec-acc0-4b40-bb2a-1fcca788fcd2"
+	}
+}

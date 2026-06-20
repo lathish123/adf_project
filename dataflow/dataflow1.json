@@ -1,0 +1,164 @@
+{
+	"name": "dataflow1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "adfdata_lake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "dimairport"
+				},
+				{
+					"linkedService": {
+						"referenceName": "adfdata_lake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "dimflight"
+				},
+				{
+					"linkedService": {
+						"referenceName": "adfdata_lake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "dimpassenger"
+				},
+				{
+					"linkedService": {
+						"referenceName": "adfdata_lake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "factbookings"
+				},
+				{
+					"linkedService": {
+						"referenceName": "adfdata_lake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "dimairline"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "adfdata_lake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "join1"
+				},
+				{
+					"name": "selectcols"
+				},
+				{
+					"name": "aggregate1"
+				},
+				{
+					"name": "window1"
+				},
+				{
+					"name": "alterRow1"
+				}
+			],
+			"scriptLines": [
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimAirport') ~> dimairport",
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimFlight') ~> dimflight",
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimPassenger') ~> dimpassenger",
+				"source(output(",
+				"          booking_id as string,",
+				"          passenger_id as string,",
+				"          flight_id as string,",
+				"          airline_id as string,",
+				"          origin_airport_id as string,",
+				"          destination_airport_id as string,",
+				"          booking_date as string,",
+				"          ticket_cost as integer,",
+				"          flight_duration_mins as string,",
+				"          checkin_status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'Sql_data') ~> factbookings",
+				"source(output(",
+				"          airline_id as string,",
+				"          airline_name as string,",
+				"          country as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'dimairline') ~> dimairline",
+				"factbookings, dimairline join(factbookings@airline_id == dimairline@airline_id,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join1",
+				"join1 select(mapColumn(",
+				"          booking_id,",
+				"          passenger_id,",
+				"          flight_id,",
+				"          origin_airport_id,",
+				"          destination_airport_id,",
+				"          booking_date,",
+				"          ticket_cost,",
+				"          flight_duration_mins,",
+				"          checkin_status,",
+				"          airline_id = dimairline@airline_id,",
+				"          airline_name,",
+				"          country",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectcols",
+				"selectcols aggregate(groupBy(airline_name),",
+				"     totalsles = sum(ticket_cost)) ~> aggregate1",
+				"aggregate1 window(desc(totalsles, true),",
+				"     top = denseRank()) ~> window1",
+				"window1 alterRow(insertIf(1==0)) ~> alterRow1",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'gold',",
+				"     folderPath: 'bussineesview',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     upsertable: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1"
+			]
+		}
+	}
+}
